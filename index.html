@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YUSR CONVERT</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.8rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 3px;
+            font-weight: 800;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+
+        .supported-formats {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .format-tag {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .format-tag:nth-child(2) { animation-delay: 0.5s; }
+        .format-tag:nth-child(3) { animation-delay: 1s; }
+        .format-tag:nth-child(4) { animation-delay: 1.5s; }
+        .format-tag:nth-child(5) { animation-delay: 2s; }
+        .format-tag:nth-child(6) { animation-delay: 2.5s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 60px 20px;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: rgba(102, 126, 234, 0.05);
+            transform: translateY(-2px);
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: rgba(102, 126, 234, 0.1);
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            color: #333;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .conversion-section {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .file-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .file-size {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .format-selector {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .format-option {
+            background: white;
+            border: 2px solid #e9ecef;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .format-option:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .format-option.selected {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .convert-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .convert-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .convert-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress {
+            display: none;
+            margin: 20px 0;
+        }
+
+        .progress-bar {
+            background: #e9ecef;
+            border-radius: 10px;
+            height: 8px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .result {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .download-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .download-btn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .reset-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .reset-btn:hover {
+            background: #5a6268;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+                letter-spacing: 2px;
+            }
+            
+            .supported-formats {
+                gap: 10px;
+            }
+            
+            .format-tag {
+                font-size: 0.8rem;
+                padding: 6px 12px;
+            }
+            
+            .upload-area {
+                padding: 40px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>YUSR CONVERT</h1>
+        <p class="subtitle">Convert your files instantly with our powerful online converter</p>
+        
+        <div class="supported-formats">
+            <div class="format-tag">ICO</div>
+            <div class="format-tag">PNG</div>
+            <div class="format-tag">JPG</div>
+            <div class="format-tag">MP4</div>
+            <div class="format-tag">MP3</div>
+            <div class="format-tag">WEBP</div>
+        </div>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">Click to select files or drag and drop</div>
+            <div class="upload-subtext">Supports ICO, PNG, JPG, MP4, MP3, WEBP</div>
+            <input type="file" id="fileInput" class="file-input" accept=".ico,.png,.jpg,.jpeg,.mp4,.mp3,.webp">
+        </div>
+
+        <div class="conversion-section" id="conversionSection">
+            <div class="file-info" id="fileInfo"></div>
+            
+            <div class="format-selector" id="formatSelector"></div>
+            
+            <button class="convert-btn" id="convertBtn" disabled>Convert File</button>
+            
+            <div class="progress" id="progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+            
+            <div class="result" id="result">
+                <p>Conversion completed!</p>
+                <a href="#" class="download-btn" id="downloadBtn">Download File</a>
+                <button class="reset-btn" id="resetBtn">Convert Another</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const conversionSection = document.getElementById('conversionSection');
+        const fileInfo = document.getElementById('fileInfo');
+        const formatSelector = document.getElementById('formatSelector');
+        const convertBtn = document.getElementById('convertBtn');
+        const progress = document.getElementById('progress');
+        const progressFill = document.getElementById('progressFill');
+        const result = document.getElementById('result');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        let selectedFile = null;
+        let selectedFormat = null;
+
+        const formatOptions = {
+            'image': ['PNG', 'JPG', 'WEBP', 'ICO'],
+            'video': ['MP4'],
+            'audio': ['MP3']
+        };
+
+        // Upload area events
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragover', handleDragOver);
+        uploadArea.addEventListener('dragleave', handleDragLeave);
+        uploadArea.addEventListener('drop', handleDrop);
+        fileInput.addEventListener('change', handleFileSelect);
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                processFile(files[0]);
+            }
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                processFile(file);
+            }
+        }
+
+        function processFile(file) {
+            selectedFile = file;
+            
+            // Show file info
+            fileInfo.innerHTML = `
+                <div class="file-name">${file.name}</div>
+                <div class="file-size">${formatFileSize(file.size)}</div>
+            `;
+
+            // Determine file type and show appropriate format options
+            const fileType = getFileType(file.name);
+            showFormatOptions(fileType);
+            
+            // Show conversion section
+            conversionSection.style.display = 'block';
+        }
+
+        function getFileType(filename) {
+            const ext = filename.toLowerCase().split('.').pop();
+            if (['png', 'jpg', 'jpeg', 'webp', 'ico'].includes(ext)) return 'image';
+            if (['mp4'].includes(ext)) return 'video';
+            if (['mp3'].includes(ext)) return 'audio';
+            return 'unknown';
+        }
+
+        function showFormatOptions(fileType) {
+            formatSelector.innerHTML = '';
+            const formats = formatOptions[fileType] || [];
+            
+            formats.forEach(format => {
+                const option = document.createElement('div');
+                option.className = 'format-option';
+                option.textContent = format;
+                option.addEventListener('click', () => selectFormat(option, format));
+                formatSelector.appendChild(option);
+            });
+        }
+
+        function selectFormat(element, format) {
+            // Remove previous selection
+            document.querySelectorAll('.format-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            
+            // Select new format
+            element.classList.add('selected');
+            selectedFormat = format;
+            convertBtn.disabled = false;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Convert button functionality
+        convertBtn.addEventListener('click', () => {
+            if (!selectedFile || !selectedFormat) return;
+            
+            // Show progress
+            progress.style.display = 'block';
+            convertBtn.disabled = true;
+            
+            // Simulate conversion process
+            let progressValue = 0;
+            const progressInterval = setInterval(() => {
+                progressValue += Math.random() * 30;
+                if (progressValue >= 100) {
+                    progressValue = 100;
+                    clearInterval(progressInterval);
+                    showResult();
+                }
+                progressFill.style.width = progressValue + '%';
+            }, 200);
+        });
+
+        function showResult() {
+            // Hide progress
+            progress.style.display = 'none';
+            
+            // Show result
+            result.style.display = 'block';
+            
+            // Create download functionality (simulated)
+            const originalName = selectedFile.name.split('.')[0];
+            const newFilename = `${originalName}_converted.${selectedFormat.toLowerCase()}`;
+            
+            downloadBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                // In a real application, this would download the converted file
+                alert(`Download would start for: ${newFilename}\n\nNote: This is a demo. In a real application, the file would be processed server-side.`);
+            });
+        }
+
+        // Reset functionality
+        resetBtn.addEventListener('click', () => {
+            selectedFile = null;
+            selectedFormat = null;
+            fileInput.value = '';
+            conversionSection.style.display = 'none';
+            progress.style.display = 'none';
+            result.style.display = 'none';
+            convertBtn.disabled = true;
+            progressFill.style.width = '0%';
+        });
+    </script>
+</body>
+</html>
