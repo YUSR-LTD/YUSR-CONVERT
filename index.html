@@ -179,6 +179,37 @@
             border-color: #667eea;
         }
 
+        .quality-selector {
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .quality-label {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .quality-slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #e9ecef;
+            outline: none;
+            -webkit-appearance: none;
+            margin-bottom: 10px;
+        }
+
+        .quality-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            cursor: pointer;
+        }
+
         .convert-btn {
             background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
@@ -261,6 +292,16 @@
             background: #5a6268;
         }
 
+        .error-message {
+            display: none;
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 1px solid #f5c6cb;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 20px;
@@ -307,10 +348,17 @@
             <input type="file" id="fileInput" class="file-input" accept=".ico,.png,.jpg,.jpeg,.mp4,.mp3,.webp">
         </div>
 
+        <div class="error-message" id="errorMessage"></div>
+
         <div class="conversion-section" id="conversionSection">
             <div class="file-info" id="fileInfo"></div>
             
             <div class="format-selector" id="formatSelector"></div>
+            
+            <div class="quality-selector" id="qualitySelector">
+                <div class="quality-label">Quality: <span id="qualityValue">80</span>%</div>
+                <input type="range" id="qualitySlider" class="quality-slider" min="10" max="100" value="80">
+            </div>
             
             <button class="convert-btn" id="convertBtn" disabled>Convert File</button>
             
@@ -340,15 +388,25 @@
         const result = document.getElementById('result');
         const downloadBtn = document.getElementById('downloadBtn');
         const resetBtn = document.getElementById('resetBtn');
+        const errorMessage = document.getElementById('errorMessage');
+        const qualitySelector = document.getElementById('qualitySelector');
+        const qualitySlider = document.getElementById('qualitySlider');
+        const qualityValue = document.getElementById('qualityValue');
 
         let selectedFile = null;
         let selectedFormat = null;
+        let convertedBlob = null;
 
         const formatOptions = {
             'image': ['PNG', 'JPG', 'WEBP', 'ICO'],
             'video': ['MP4'],
             'audio': ['MP3']
         };
+
+        // Quality slider
+        qualitySlider.addEventListener('input', (e) => {
+            qualityValue.textContent = e.target.value;
+        });
 
         // Upload area events
         uploadArea.addEventListener('click', () => fileInput.click());
@@ -384,6 +442,7 @@
         }
 
         function processFile(file) {
+            hideError();
             selectedFile = file;
             
             // Show file info
@@ -394,7 +453,8 @@
 
             // Determine file type and show appropriate format options
             const fileType = getFileType(file.name);
-            showFormatOptions(fileType);
+            const currentFormat = getCurrentFormat(file.name);
+            showFormatOptions(fileType, currentFormat);
             
             // Show conversion section
             conversionSection.style.display = 'block';
@@ -408,26 +468,37 @@
             return 'unknown';
         }
 
-        function showFormatOptions(fileType) {
+        function getCurrentFormat(filename) {
+            return filename.toLowerCase().split('.').pop().toUpperCase();
+        }
+
+        function showFormatOptions(fileType, currentFormat) {
             formatSelector.innerHTML = '';
             const formats = formatOptions[fileType] || [];
             
             formats.forEach(format => {
-                const option = document.createElement('div');
-                option.className = 'format-option';
-                option.textContent = format;
-                option.addEventListener('click', () => selectFormat(option, format));
-                formatSelector.appendChild(option);
+                if (format !== currentFormat) {
+                    const option = document.createElement('div');
+                    option.className = 'format-option';
+                    option.textContent = format;
+                    option.addEventListener('click', () => selectFormat(option, format));
+                    formatSelector.appendChild(option);
+                }
             });
+
+            // Show quality selector for image conversions
+            if (fileType === 'image') {
+                qualitySelector.style.display = 'block';
+            } else {
+                qualitySelector.style.display = 'none';
+            }
         }
 
         function selectFormat(element, format) {
-            // Remove previous selection
             document.querySelectorAll('.format-option').forEach(opt => {
                 opt.classList.remove('selected');
             });
             
-            // Select new format
             element.classList.add('selected');
             selectedFormat = format;
             convertBtn.disabled = false;
@@ -441,55 +512,150 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
 
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+
+        function hideError() {
+            errorMessage.style.display = 'none';
+        }
+
+        // Real conversion functions
+        async function convertImage(file, targetFormat, quality) {
+            return new Promise((resolve, reject) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+
+                img.onload = () => {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+
+                    let mimeType;
+                    switch (targetFormat.toLowerCase()) {
+                        case 'png':
+                            mimeType = 'image/png';
+                            canvas.toBlob(resolve, mimeType);
+                            break;
+                        case 'jpg':
+                        case 'jpeg':
+                            mimeType = 'image/jpeg';
+                            canvas.toBlob(resolve, mimeType, quality / 100);
+                            break;
+                        case 'webp':
+                            mimeType = 'image/webp';
+                            canvas.toBlob(resolve, mimeType, quality / 100);
+                            break;
+                        case 'ico':
+                            // For ICO, we'll use PNG format but with .ico extension
+                            mimeType = 'image/png';
+                            canvas.toBlob(resolve, mimeType);
+                            break;
+                        default:
+                            reject(new Error('Unsupported format'));
+                    }
+                };
+
+                img.onerror = () => reject(new Error('Failed to load image'));
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
+        async function convertVideo(file, targetFormat) {
+            // Note: Real video conversion requires server-side processing or WebAssembly
+            // This is a placeholder that copies the file with new extension
+            showError('Video conversion requires server-side processing. This is a demonstration.');
+            throw new Error('Video conversion not supported in browser');
+        }
+
+        async function convertAudio(file, targetFormat) {
+            // Note: Real audio conversion requires server-side processing or WebAssembly
+            // This is a placeholder that copies the file with new extension
+            showError('Audio conversion requires server-side processing. This is a demonstration.');
+            throw new Error('Audio conversion not supported in browser');
+        }
+
         // Convert button functionality
-        convertBtn.addEventListener('click', () => {
+        convertBtn.addEventListener('click', async () => {
             if (!selectedFile || !selectedFormat) return;
             
-            // Show progress
+            hideError();
             progress.style.display = 'block';
             convertBtn.disabled = true;
             
-            // Simulate conversion process
-            let progressValue = 0;
-            const progressInterval = setInterval(() => {
-                progressValue += Math.random() * 30;
-                if (progressValue >= 100) {
-                    progressValue = 100;
-                    clearInterval(progressInterval);
-                    showResult();
+            try {
+                const fileType = getFileType(selectedFile.name);
+                const quality = parseInt(qualitySlider.value);
+                
+                // Simulate progress
+                let progressValue = 0;
+                const progressInterval = setInterval(() => {
+                    progressValue += Math.random() * 20;
+                    if (progressValue >= 90) {
+                        progressValue = 90;
+                        clearInterval(progressInterval);
+                    }
+                    progressFill.style.width = progressValue + '%';
+                }, 100);
+
+                // Perform actual conversion
+                if (fileType === 'image') {
+                    convertedBlob = await convertImage(selectedFile, selectedFormat, quality);
+                } else if (fileType === 'video') {
+                    convertedBlob = await convertVideo(selectedFile, selectedFormat);
+                } else if (fileType === 'audio') {
+                    convertedBlob = await convertAudio(selectedFile, selectedFormat);
                 }
-                progressFill.style.width = progressValue + '%';
-            }, 200);
+
+                clearInterval(progressInterval);
+                progressFill.style.width = '100%';
+                
+                setTimeout(() => {
+                    showResult();
+                }, 500);
+
+            } catch (error) {
+                progress.style.display = 'none';
+                convertBtn.disabled = false;
+                showError('Conversion failed: ' + error.message);
+            }
         });
 
         function showResult() {
-            // Hide progress
             progress.style.display = 'none';
-            
-            // Show result
             result.style.display = 'block';
             
-            // Create download functionality (simulated)
             const originalName = selectedFile.name.split('.')[0];
             const newFilename = `${originalName}_converted.${selectedFormat.toLowerCase()}`;
             
-            downloadBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                // In a real application, this would download the converted file
-                alert(`Download would start for: ${newFilename}\n\nNote: This is a demo. In a real application, the file would be processed server-side.`);
-            });
+            // Create real download functionality
+            const url = URL.createObjectURL(convertedBlob);
+            downloadBtn.href = url;
+            downloadBtn.download = newFilename;
+            downloadBtn.onclick = null; // Remove any previous click handlers
         }
 
         // Reset functionality
         resetBtn.addEventListener('click', () => {
             selectedFile = null;
             selectedFormat = null;
+            convertedBlob = null;
             fileInput.value = '';
             conversionSection.style.display = 'none';
             progress.style.display = 'none';
             result.style.display = 'none';
             convertBtn.disabled = true;
             progressFill.style.width = '0%';
+            qualitySlider.value = 80;
+            qualityValue.textContent = '80';
+            hideError();
+            
+            // Clean up blob URL
+            if (downloadBtn.href && downloadBtn.href.startsWith('blob:')) {
+                URL.revokeObjectURL(downloadBtn.href);
+            }
         });
     </script>
 </body>
